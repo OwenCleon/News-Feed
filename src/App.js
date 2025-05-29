@@ -57,62 +57,58 @@ const NewsViewer = () => {
     const newsMatches = [...fullText.matchAll(/News\s+(\d+)\s*\((\d{1,2}\/\d{1,2}\/\d{4})\):/g)];
     const articles = [];
 
-    for (let i = 0; i < newsMatches.length; i++) {
-      const currentMatch = newsMatches[i];
-      const nextMatch = newsMatches[i + 1];
+   for (let i = 0; i < newsMatches.length; i++) {
+  const currentMatch = newsMatches[i];
+  const nextMatch = newsMatches[i + 1];
 
-      // Extract article content between current and next news header (or end of text)
-      const startIndex = currentMatch.index + currentMatch[0].length;
-      const endIndex = nextMatch ? nextMatch.index : fullText.length;
-      const articleContent = fullText.substring(startIndex, endIndex);
+  // Extract article content between current and next news header (or end of text)
+  const startIndex = currentMatch.index + currentMatch[0].length;
+  const endIndex = nextMatch ? nextMatch.index : fullText.length;
+  const articleContent = fullText.substring(startIndex, endIndex);
 
-      // Parse date
-      const dateStr = currentMatch[2];
-      const date = parseDate(dateStr);
+  // Parse date
+  const dateStr = currentMatch[2];
+  const date = parseDate(dateStr);
 
-      // Extract headline
-      const headlineMatch = articleContent.match(/Headline:\s*([^\
-\
-]*?)(?:\s*Image:|$)/i);
-      const headline = headlineMatch ? headlineMatch[1].trim() : 'No headline';
+  // Extract headline
+  const headlineMatch = articleContent.match(/Headline:\s*([^\n\r]*?)(?:\s*Image:|$)/i);
+  const headline = headlineMatch ? headlineMatch[1].trim() : 'No headline';
 
-      // Extract body
-      const bodyMatch = articleContent.match(/Body:\s*(.*?)(?:\s*Author:|$)/is);
-      const body = bodyMatch ? bodyMatch[1].replace(/\s+/g, ' ').trim() : 'No content available';
+  // Extract body
+  const bodyMatch = articleContent.match(/Body:\s*(.*?)(?:\s*Author:|$)/is);
+  const body = bodyMatch ? bodyMatch[1].replace(/\s+/g, ' ').trim() : 'No content available';
 
-      // Extract author
-      const authorMatch = articleContent.match(/Author:\s*([^\
-\
-]*)/i);
-      const author = authorMatch ? authorMatch[1].trim() : 'Unknown author';
+  // Extract author
+  const authorMatch = articleContent.match(/Author:\s*([^\n\r]*)/i);
+  const author = authorMatch ? authorMatch[1].trim() : 'Unknown author';
 
-      // Extract image URL from the HTML for this specific article
-      let imageUrl = '';
+  // Extract image URL from the HTML for this specific article
+  let imageUrl = '';
 
-      // Find image URL by looking for Google Drive links in the HTML
-      const htmlContentDiv = contentDiv.innerHTML;
+  // Find image URL by looking for Google Drive links in the HTML
+  const htmlContentDiv = contentDiv.innerHTML;
 
-      // Look for Google Drive links associated with this article's headline
-      const headlineRegex = new RegExp(headline.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      const paragraphs = contentDiv.querySelectorAll('p');
+  // Look for Google Drive links associated with this article's headline
+  const headlineRegex = new RegExp(headline.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  const paragraphs = contentDiv.querySelectorAll('p');
 
-      paragraphs.forEach(paragraph => {
-        const pText = paragraph.textContent || paragraph.innerText;
-        const pHtml = paragraph.innerHTML;
+  paragraphs.forEach(paragraph => {
+    const pText = paragraph.textContent || paragraph.innerText;
+    const pHtml = paragraph.innerHTML;
 
-        // If this paragraph contains the headline and Image: text
-        if (pText.includes(headline) && pText.includes('Image:')) {
-          // Extract all Google Drive links from this paragraph
-          const driveLinks = pHtml.match(/https:\/\/[^"'\s]*drive\.google\.com\/file\/d\/[^"'\s]*/g);
-          if (driveLinks && driveLinks.length > 0) {
-            // Use the first Google Drive link found
-            let rawUrl = driveLinks[0].replace(/&amp;/g, '&');
-            // Clean up any URL encoding artifacts
-            rawUrl = rawUrl.replace(/&[a-zA-Z0-9#]+;/g, '');
-            imageUrl = convertGoogleDriveUrl(rawUrl);
-          }
-        }
-      });
+    // If this paragraph contains the headline and Image: text
+    if (pText.includes(headline) && pText.includes('Image:')) {
+      // Extract all Google Drive links from this paragraph
+      const driveLinks = pHtml.match(/https:\/\/[^"'\s]*drive\.google\.com\/file\/d\/[^"'\s]*/g);
+      if (driveLinks && driveLinks.length > 0) {
+        // Use the first Google Drive link found
+        let rawUrl = driveLinks[0].replace(/&amp;/g, '&');
+        // Clean up any URL encoding artifacts
+        rawUrl = rawUrl.replace(/&[a-zA-Z0-9#]+;/g, '');
+        imageUrl = convertGoogleDriveUrl(rawUrl);
+      }
+    }
+  });
 
       // Alternative approach: look for any Google Drive links in the entire article content section
       if (!imageUrl) {
