@@ -375,64 +375,60 @@ const ArticlePage = () => {
       const articleContent = fullText.substring(startIndex, endIndex);
 
       const dateStr = currentMatch[2];
-      const date = parseDate(dateStr);
+         const date = parseDate(dateStr);
 
-      const headlineMatch = articleContent.match(/Headline:\s*([^\
-\
-]*?)(?:\s*Image:|$)/i);
-      const headline = headlineMatch ? headlineMatch[1].trim() : 'No headline';
+    const headlineMatch = articleContent.match(/Headline:\s*([^\n\r]*?)(?:\s*Image:|$)/i);
+    const headline = headlineMatch ? headlineMatch[1].trim() : 'No headline';
 
-      if (createSlug(headline) === targetSlug) {
-        const bodyMatch = articleContent.match(/Body:\s*(.*?)(?:\s*Author:|$)/is);
-        const body = bodyMatch ? bodyMatch[1].replace(/\s+/g, ' ').trim() : 'No content available';
+    if (createSlug(headline) === targetSlug) {
+      const bodyMatch = articleContent.match(/Body:\s*(.*?)(?:\s*Author:|$)/is);
+      const body = bodyMatch ? bodyMatch[1].replace(/\s+/g, ' ').trim() : 'No content available';
 
-        const authorMatch = articleContent.match(/Author:\s*([^\
-\
-]*)/i);
-        const author = authorMatch ? authorMatch[1].trim() : 'Unknown author';
+      const authorMatch = articleContent.match(/Author:\s*([^\n\r]*)/i);
+      const author = authorMatch ? authorMatch[1].trim() : 'Unknown author';
 
-        // Extract image URL
-        let imageUrl = '';
-        const htmlContentDiv = contentDiv.innerHTML;
-        const paragraphs = contentDiv.querySelectorAll('p');
+      // Extract image URL
+      let imageUrl = '';
+      const htmlContentDiv = contentDiv.innerHTML;
+      const paragraphs = contentDiv.querySelectorAll('p');
 
-        paragraphs.forEach(paragraph => {
-          const pText = paragraph.textContent || paragraph.innerText;
-          const pHtml = paragraph.innerHTML;
+      paragraphs.forEach(paragraph => {
+        const pText = paragraph.textContent || paragraph.innerText;
+        const pHtml = paragraph.innerHTML;
 
-          if (pText.includes(headline) && pText.includes('Image:')) {
-            const driveLinks = pHtml.match(/https:\/\/[^"'\s]*drive\.google\.com\/file\/d\/[^"'\s]*/g);
-            if (driveLinks && driveLinks.length > 0) {
-              let rawUrl = driveLinks[0].replace(/&amp;/g, '&');
-              rawUrl = rawUrl.replace(/&[a-zA-Z0-9#]+;/g, '');
-              imageUrl = convertGoogleDriveUrl(rawUrl);
-            }
-          }
-        });
-
-        if (!imageUrl) {
-          const driveLinks = htmlContentDiv.match(/https:\/\/[^"'\s]*drive\.google\.com\/file\/d\/[^"'\s]*/g);
+        if (pText.includes(headline) && pText.includes('Image:')) {
+          const driveLinks = pHtml.match(/https:\/\/[^"'\s]*drive\.google\.com\/file\/d\/[^"'\s]*/g);
           if (driveLinks && driveLinks.length > 0) {
             let rawUrl = driveLinks[0].replace(/&amp;/g, '&');
             rawUrl = rawUrl.replace(/&[a-zA-Z0-9#]+;/g, '');
             imageUrl = convertGoogleDriveUrl(rawUrl);
           }
         }
+      });
 
-        return {
-          id: Date.now(),
-          date,
-          dateStr,
-          headline,
-          body,
-          author,
-          imageUrl,
-          slug: targetSlug
-        };
+      if (!imageUrl) {
+        const driveLinks = htmlContentDiv.match(/https:\/\/[^"'\s]*drive\.google\.com\/file\/d\/[^"'\s]*/g);
+        if (driveLinks && driveLinks.length > 0) {
+          let rawUrl = driveLinks[0].replace(/&amp;/g, '&');
+          rawUrl = rawUrl.replace(/&[a-zA-Z0-9#]+;/g, '');
+          imageUrl = convertGoogleDriveUrl(rawUrl);
+        }
       }
-    }
 
-    return null;
+      return {
+        id: Date.now(),
+        date,
+        dateStr,
+        headline,
+        body,
+        author,
+        imageUrl,
+        slug: targetSlug
+      };
+    }
+  }
+
+     return null;
   };
 
   // Fetch specific article
