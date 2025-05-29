@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import './App.css';
 
 // --- Constants & Config ---
@@ -33,7 +33,7 @@ const formatDate = (date) => {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 };
 
-// --- Article Parsing (Original User Version) ---
+// --- Article Parsing ---
 const parseGoogleDocArticles = (htmlContent) => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlContent, 'text/html');
@@ -76,7 +76,7 @@ const parseGoogleDocArticles = (htmlContent) => {
         });
 
         articles.push({
-            id: `gdoc_${Date.now() + Math.random()}`, // Prefix to distinguish source
+            id: `gdoc_${Date.now() + Math.random()}`,
             date,
             dateStr,
             headline,
@@ -84,13 +84,13 @@ const parseGoogleDocArticles = (htmlContent) => {
             author,
             imageUrl,
             slug: createSlug(headline),
-            isLocal: false // Mark as not local
+            isLocal: false
         });
     }
     return articles.sort((a, b) => b.date - a.date);
 };
 
-// --- Article Context for State Management ---
+// --- Article Context ---
 const ArticleContext = createContext();
 
 export const ArticleProvider = ({ children }) => {
@@ -102,29 +102,19 @@ export const ArticleProvider = ({ children }) => {
         try {
             setLoading(true);
             setError(null);
-
-            // Fetch from Google Doc
             const response = await fetch(GOOGLE_DOC_URL);
             if (!response.ok) throw new Error('Failed to fetch base news');
             const htmlContent = await response.text();
             const gdocArticles = parseGoogleDocArticles(htmlContent);
-
-            // Fetch from Local Storage
             const localArticles = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
-            // Ensure local dates are Date objects
             localArticles.forEach(a => a.date = new Date(a.date));
-
-            // Merge: Keep local, add non-local gdoc (prevents duplicates if GDoc updates)
             const localSlugs = new Set(localArticles.map(a => a.slug));
             const combined = [
                 ...localArticles,
                 ...gdocArticles.filter(a => !localSlugs.has(a.slug))
             ];
-
-            // Sort again
             combined.sort((a, b) => new Date(b.date) - new Date(a.date));
             setArticles(combined);
-
         } catch (err) {
             setError(err.message);
             console.error('Error loading articles:', err);
@@ -158,7 +148,7 @@ export const ArticleProvider = ({ children }) => {
     const deleteArticle = (articleId) => {
         const articleToDelete = articles.find(a => a.id === articleId);
         if (articleToDelete && !articleToDelete.isLocal) {
-            alert("You cannot delete articles fetched from Google Docs here. \nPlease use the Google Docs editor for permanent deletions.");
+            alert("You cannot delete articles fetched from Google Docs here. Please use the Google Docs editor for permanent deletions.");
             return;
         }
         saveArticles(articles.filter(a => a.id !== articleId));
@@ -172,8 +162,34 @@ export const ArticleProvider = ({ children }) => {
 export const useArticles = () => useContext(ArticleContext);
 
 // --- Components ---
-const LoadingSpinner = ({ message }) => ( /* ... as before ... */ );
-const ErrorDisplay = ({ error, onRetry }) => ( /* ... as before ... */ );
+
+// Loading Spinner (FIXED)
+const LoadingSpinner = ({ message }) => (
+  <div className="min-h-screen bg-[#fdfdfd] flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a73e8] mx-auto mb-4"></div>
+      <p className="text-[#2b2b2b] font-medium">{message}</p>
+    </div>
+  </div>
+);
+
+// Error Message (FIXED)
+const ErrorDisplay = ({ error, onRetry }) => (
+  <div className="min-h-screen bg-[#fdfdfd] flex items-center justify-center">
+    <div className="text-center max-w-md mx-auto px-4">
+      <div className="text-red-500 text-5xl mb-4">⚠️</div>
+      <h2 className="text-xl font-semibold text-[#2b2b2b] mb-2">Unable to Load News</h2>
+      <p className="text-gray-600 mb-4">{error}</p>
+      <button
+        onClick={onRetry}
+        className="bg-[#1a73e8] text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+      >
+        Try Again
+      </button>
+    </div>
+  </div>
+);
+
 
 const NewsViewer = () => {
     const { articles, loading, error, fetchArticles } = useArticles();
@@ -190,14 +206,16 @@ const NewsViewer = () => {
     const handleArticleClick = (article) => navigate(`/${article.slug}`);
 
     const filteredArticles = articles.filter(article => {
+        const lowerSearchTerm = searchTerm.toLowerCase();
         const matchesKeyword = searchTerm ?
-            (article.headline.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             article.body.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             article.author.toLowerCase().includes(searchTerm.toLowerCase()))
+            (article.headline.toLowerCase().includes(lowerSearchTerm) ||
+             article.body.toLowerCase().includes(lowerSearchTerm) ||
+             article.author.toLowerCase().includes(lowerSearchTerm))
             : true;
 
         const matchesDate = searchDate ?
-            (formatDate(article.date) === formatDate(new Date(searchDate + 'T00:00:00Z')))
+             // Compare only YYYY-MM-DD part
+            (article.date.toISOString().split('T')[0] === searchDate)
             : true;
 
         return matchesKeyword && matchesDate && searchTerm.toUpperCase() !== ADMIN_KEYWORD;
@@ -214,7 +232,6 @@ const NewsViewer = () => {
                         News Viewer
                     </h1>
                     <p className="text-gray-600 mt-2">Stay updated with the latest news</p>
-                    {/* Search/Filter Bar */}
                     <div className="mt-6 flex flex-col md:flex-row gap-4">
                         <input
                             type="text"
@@ -274,7 +291,13 @@ const NewsViewer = () => {
                    </button>
                  </div>
             </main>
-            {/* ... Footer ... */}
+             <footer className="bg-white border-t border-gray-100 mt-16">
+               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                 <div className="text-center text-gray-500">
+                   <p>© 2025 News Viewer.</p>
+                 </div>
+               </div>
+             </footer>
         </div>
     );
 };
@@ -282,29 +305,31 @@ const NewsViewer = () => {
 const ArticlePage = () => {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const { articles, loading, error } = useArticles(); // Use context
+    const { articles, loading } = useArticles();
     const [article, setArticle] = useState(null);
+    const [pageError, setPageError] = useState(null); // Local error state
 
     useEffect(() => {
         if (!loading && articles.length > 0) {
             const found = articles.find(a => a.slug === slug);
             if (found) {
                 setArticle(found);
+                setPageError(null);
             } else {
-                setError('Article not found'); // Set error if not found after loading
+                setArticle(null);
+                setPageError('Article not found');
             }
         }
-    }, [slug, articles, loading]); // Depend on articles and loading state
+    }, [slug, articles, loading]);
 
-    // Use the original loading/error/display logic, but fed by context
     if (loading) return <LoadingSpinner message="Loading article..." />;
-    if (error || !article) {
+    if (pageError || !article) {
        return (
             <div className="min-h-screen bg-[#fdfdfd] flex items-center justify-center">
                 <div className="text-center max-w-md mx-auto px-4">
                     <div className="text-red-500 text-5xl mb-4">📰</div>
                     <h2 className="text-xl font-semibold text-[#2b2b2b] mb-2">Article Not Found</h2>
-                    <p className="text-gray-600 mb-4">{error || "The article you're looking for doesn't exist."}</p>
+                    <p className="text-gray-600 mb-4">{pageError || "The article you're looking for doesn't exist."}</p>
                     <button onClick={() => navigate('/')} className="bg-[#1a73e8] text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
                         Back to Home
                     </button>
@@ -313,10 +338,20 @@ const ArticlePage = () => {
        );
     }
 
-    // Display article (same JSX as before)
     return (
         <div className="min-h-screen bg-[#fdfdfd]">
-            {/* ... Header ... */}
+             <header className="bg-white shadow-sm border-b border-gray-100">
+                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                     <div className="flex items-center justify-between">
+                         <h1 className="text-4xl font-bold text-[#2b2b2b] font-serif cursor-pointer hover:text-[#1a73e8] transition-colors" onClick={() => navigate('/')}>
+                             News Viewer
+                         </h1>
+                         <button onClick={() => navigate('/')} className="text-[#1a73e8] hover:text-blue-600 font-medium transition-colors">
+                             ← Back to News
+                         </button>
+                     </div>
+                 </div>
+             </header>
              <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <article className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     {article.imageUrl && (
@@ -342,7 +377,13 @@ const ArticlePage = () => {
                     </div>
                 </article>
             </main>
-            {/* ... Footer ... */}
+             <footer className="bg-white border-t border-gray-100 mt-16">
+               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                 <div className="text-center text-gray-500">
+                   <p>© 2025 News Viewer.</p>
+                 </div>
+               </div>
+             </footer>
         </div>
     );
 };
@@ -355,7 +396,7 @@ const AdminDashboard = () => {
     const [newBody, setNewBody] = useState('');
     const [newAuthor, setNewAuthor] = useState('');
     const [newImageUrl, setNewImageUrl] = useState('');
-    const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
+    const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -368,14 +409,10 @@ const AdminDashboard = () => {
             body: newBody,
             author: newAuthor,
             imageUrl: newImageUrl,
-            date: new Date(newDate + 'T00:00:00Z'), // Add as UTC
-            dateStr: new Date(newDate + 'T00:00:00Z').toLocaleDateString('en-GB') // dd/mm/yyyy approx
+            date: new Date(newDate + 'T00:00:00Z'),
+            dateStr: new Date(newDate + 'T00:00:00Z').toLocaleDateString('en-GB')
         });
-        // Clear form
-        setNewHeadline('');
-        setNewBody('');
-        setNewAuthor('');
-        setNewImageUrl('');
+        setNewHeadline(''); setNewBody(''); setNewAuthor(''); setNewImageUrl('');
         setNewDate(new Date().toISOString().split('T')[0]);
     };
 
@@ -392,7 +429,6 @@ const AdminDashboard = () => {
                   <p>You are managing articles stored **locally in your browser**. Changes here **DO NOT** affect the original Google Doc. To make permanent, shared changes, you must <a href={GOOGLE_DOC_EDIT_URL} target="_blank" rel="noopener noreferrer" className="font-bold underline hover:text-yellow-800">edit the Google Document directly</a>.</p>
                 </div>
 
-                {/* Add Article Form */}
                 <div className="bg-white p-6 rounded-xl shadow-md mb-12 border border-gray-100">
                     <h2 className="text-2xl font-semibold text-[#2b2b2b] mb-6">Add New Article (Local)</h2>
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -420,7 +456,6 @@ const AdminDashboard = () => {
                     </form>
                 </div>
 
-                {/* Manage Existing Articles */}
                 <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                      <h2 className="text-2xl font-semibold text-[#2b2b2b] mb-6">Manage Articles</h2>
                      <ul className="divide-y divide-gray-200">
@@ -437,7 +472,7 @@ const AdminDashboard = () => {
                                 </div>
                                 <button
                                     onClick={() => deleteArticle(article.id)}
-                                    disabled={!article.isLocal} // Only allow deleting local articles
+                                    disabled={!article.isLocal}
                                     className={`px-4 py-1 rounded-md text-white transition-colors ${
                                         article.isLocal
                                         ? 'bg-red-500 hover:bg-red-600'
@@ -459,7 +494,7 @@ const AdminDashboard = () => {
 // --- App Structure ---
 function App() {
   return (
-    <ArticleProvider> {/* Wrap everything in the provider */}
+    <ArticleProvider>
         <Router>
           <Routes>
             <Route path="/" element={<NewsViewer />} />
