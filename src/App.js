@@ -600,3 +600,7 @@ function App() {
         <Route path="/:slug" element={<ArticlePage />} />
     </Routes>
 </Router>
+  );
+}
+
+export default App;
