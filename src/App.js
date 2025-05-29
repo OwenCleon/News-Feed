@@ -230,15 +230,13 @@ const NewsViewer = () => {
         <div className="grid gap-8 md:gap-12">
             {articles.map((article, index) => (
             <article key={article.id}
-                     className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300 cursor-pointer group ${
-                     index= = =0 ? 'md:col-span-2' : ''
-                     }`}
+                     className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300 cursor-pointer group"
                      onClick={() =>
                 handleArticleClick(article)}
                 >
                 {/* Article Image */}
                 {article.imageUrl && (
-                <div className="aspect-video md:aspect-[2/1] overflow-hidden bg-gray-100">
+                <div className="aspect-video overflow-hidden bg-gray-100">
                     <img src={article.imageUrl}
                          alt={article.headline}
                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -262,7 +260,7 @@ const NewsViewer = () => {
                 )}
 
                 {/* Article Content */}
-                <div className="p-6 md:p-8">
+                <div className="p-6">
                     {/* Date */}
                     <div className="flex items-center text-sm text-gray-500 mb-3">
                         <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -272,9 +270,7 @@ const NewsViewer = () => {
                     </div>
 
                     {/* Headline */}
-                    <h2 className={`font-bold text-[#2b2b2b] mb-4 leading-tight font-serif group-hover:text-[#1a73e8] transition-colors ${
-                        index= = =0 ? 'text-3xl md:text-4xl' : 'text-xl md:text-2xl'
-                        }`}>
+                    <h2 className="text-xl font-bold text-[#2b2b2b] mb-4 leading-tight font-serif group-hover:text-[#1a73e8] transition-colors">
                         {article.headline}
                     </h2>
 
@@ -292,6 +288,7 @@ const NewsViewer = () => {
                     </div>
                 </div>
             </article>
+            ))}
             ))}
         </div>
         )}
